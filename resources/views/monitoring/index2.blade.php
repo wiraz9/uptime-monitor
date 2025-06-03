@@ -42,18 +42,18 @@
                     <thead class="bg-blue-100">
                         <tr>
                             <th class="px-2 py-2 text-left">Nama</th>
-                            <th>Status</th>
-                            <th>Rek</th>
-                            <th>Rek Aktif</th>
+                            <th>Jumlah Rekening</th>
+                            <th>Aktif</th>
+                            <th>Tidak Aktif</th>
                             <th>Saldo</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr class="border-t">
                           <td class="px-2 py-2 font-bold" id="nama-akun">Loading...</td>
-                          <td><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Aktif</span></td>
                           <td class="text-center" id="jumlah-rekening">-</td>
                           <td class="text-center" id="rekening-aktif">-</td>
+                          <td class="text-center" id="rekening-tidak-aktif">-</td>
                           <td class="font-bold text-right pr-2" id="saldo-moota">Loading...</td>                          
                         </tr>
                     </tbody>
@@ -72,11 +72,11 @@
                 </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="table w-full text-sm border">
+                <table class="table w-full text-sm border" id="notifikasi-monitoring">
                     <thead class="bg-blue-100">
                         <tr>
                             <th class="px-2 py-2 text-left">Nama</th>
-                            <th>Number</th>
+                            <th>Nomor</th>
                             <th>Vendor</th>
                             <th>CS</th>
                             <th>Status</th>
@@ -115,82 +115,103 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', async function () {
-        const response = await fetch('/api/moota-tokens');
-        const tokens = await response.json();
-        const tokenV1 = tokens.tokenV1;
-        const tokenV2 = tokens.tokenV2;
+    // Ambil data rekening
+    fetch('/api/moota/bank', {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(res => res.ok ? res.json() : Promise.reject(res))
+    .then(data => {
+        const akun = data.data ?? [];
+        const aktif = akun.filter(x => x.is_active).length;
+        const tidakAktif = akun.length - aktif;
 
-        // Ambil data rekening
-        fetch('https://app.moota.co/api/v2/bank', {
-            method: 'GET',
-            headers: {
-                'Authorization': tokenV2,
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .then(data => {
-            const akun = data.data ?? [];
-            const aktif = akun.filter(x => x.is_active).length;
-            console.log(data.data)
-
-            document.getElementById('jumlah-rekening').textContent = akun.length;
-            document.getElementById('rekening-aktif').textContent = aktif;
-        })
-        .catch(error => {
-            console.error('Error fetching bank data:', error);
-            document.getElementById('jumlah-rekening').textContent = '-';
-            document.getElementById('rekening-aktif').textContent = '-';
-        });
-
-        // Ambil nama user
-        fetch('https://app.moota.co/api/v1/profile', {
-            method: 'GET',
-            headers: {
-                'Authorization': tokenV1,
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .then(data => {
-            document.getElementById('nama-akun').textContent = data.name ?? 'Tidak diketahui';
-            console.log(data)
-
-            const formatted = new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR'
-            }).format(data.point ?? 0);
-
-            document.getElementById('saldo-moota').textContent = formatted;
-
-        })
-        .catch(error => {
-            console.error('Error fetching user data:', error);
-            document.getElementById('nama-akun').textContent = '-';
-            document.getElementById('saldo-moota').textContent = 'Gagal';
-        });
-
-        // Ambil saldo poin Moota
-        fetch('https://app.moota.co/api/v1/balance', {
-            method: 'GET',
-            headers: {
-                'Authorization': tokenV1,
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .then(data => {
-            const formatted = new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR'
-            }).format(data.balance ?? 0);
-
-            document.getElementById('saldo-moota').textContent = formatted;
-        })
-        .catch(error => {
-            console.error('Error fetching balance data:', error);
-            document.getElementById('saldo-moota').textContent = 'Gagal';
-        });
+        document.getElementById('jumlah-rekening').textContent = akun.length;
+        document.getElementById('rekening-aktif').textContent = aktif;
+        document.getElementById('rekening-tidak-aktif').textContent = tidakAktif;
+    })
+    .catch(error => {
+        console.error('Error fetching bank data:', error);
+        document.getElementById('jumlah-rekening').textContent = '-';
+        document.getElementById('rekening-aktif').textContent = '-';
+        document.getElementById('rekening-tidak-aktif').textContent = '-';
     });
+
+    // Ambil nama user
+    fetch('/api/moota/profile', {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(res => res.ok ? res.json() : Promise.reject(res))
+    .then(data => {
+        document.getElementById('nama-akun').textContent = data.name ?? 'Tidak diketahui';
+    })
+    .catch(error => {
+        console.error('Error fetching profile name:', error);
+        document.getElementById('nama-akun').textContent = '-';
+    });
+
+    // Ambil saldo poin Moota
+    fetch('/api/moota/balance', {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(res => res.ok ? res.json() : Promise.reject(res))
+    .then(data => {
+        const formatted = new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR'
+        }).format(data.balance ?? 0);
+
+        document.getElementById('saldo-moota').textContent = formatted;
+    })
+    .catch(error => {
+        console.error('Error fetching balance:', error);
+        document.getElementById('saldo-moota').textContent = 'Gagal';
+    });
+
+    // Ambil data notifikasi dari Woowa
+    fetch('/proxy/woowa', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    })
+    .then(res => {
+        console.log('Response status:', res.status);
+        console.log('Response headers:', res.headers);
+        return res.ok ? res.json() : Promise.reject(res);
+    })
+    .then(data => {
+        console.log('Data fetched from proxy Woowa:', data);
+        const tbody = document.querySelector('#notifikasi-monitoring tbody');
+        tbody.innerHTML = ''; // Kosongkan tabel sebelum diisi
+
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.classList.add('border-t');
+
+            row.innerHTML = `
+                <td class="px-2 py-2 font-bold">${item.account}</td>
+                <td class="text-center">${item.Number}</td>
+                <td class="text-center">Woowa</td>
+                <td class="text-center">Rahmat</td>
+                <td><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">${item.status}</span></td>
+            `;
+
+            tbody.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching data from proxy Woowa:', error);
+    });
+});
 </script>
 @endpush

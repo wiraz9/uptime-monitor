@@ -20,3 +20,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::get('/moota-tokens', [MonitoringController::class, 'getTokens']);
+Route::get('/moota/bank', [MonitoringController::class, 'getBankData']);
+Route::get('/moota/profile', [MonitoringController::class, 'getProfileData']);
+Route::get('/moota/balance', [MonitoringController::class, 'getBalanceData']);

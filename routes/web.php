@@ -4,6 +4,8 @@ use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\SiteController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,3 +43,12 @@ Route::group(['middleware' => ['auth']], function () {
  * Vendors Routes
  */
 Route::resource('vendors', App\Http\Controllers\VendorController::class);
+
+Route::post('/proxy/woowa', function (Request $request) {
+    $response = Http::withHeaders([
+        'Authorization' => '61e7958010d7f21aa2f09dc886f87744',
+        'Content-Type' => 'application/json',
+    ])->post('http://116.203.191.58/api/info', $request->all());
+
+    return response()->json($response->json(), $response->status());
+});
